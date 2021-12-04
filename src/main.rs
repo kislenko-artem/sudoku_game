@@ -1,5 +1,19 @@
-use macroquad::ui::{hash, root_ui, widgets};
+use std::collections::HashMap;
 use macroquad::prelude::*;
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct Key {
+    x: usize,
+    y: usize,
+}
+
+enum Difficult {
+    SuperEasy,
+    Easy,
+    Medium,
+    Hard,
+}
+
 
 #[macroquad::main("Sudoku")]
 async fn main() {
@@ -11,44 +25,137 @@ async fn main() {
     let start_x: usize = (screen_width() / 2.0 - offset as f32 * steps / 2.0) as usize;
     let end_x: usize = (start_x as f32 + offset as f32 * steps) as usize;
     let matrix = create_matrix();
+    let mut user_matrix: HashMap<Key, u32> = HashMap::default();
+    let mut empties: HashMap<Key, bool> = HashMap::default();
+    let mut marked_coord: Vec<[usize; 2]> = vec![];
+    let current_difficult = Difficult::SuperEasy;
+
+    match current_difficult {
+        Difficult::SuperEasy => {
+            for y in (0..9).step_by(3) {
+                for x in (0..9).step_by(3) {
+                    empties.insert(Key{x: x + rand::RandomRange::gen_range(0, 1), y: y}, false);
+                }
+            }
+        }
+        Difficult::Easy => {}
+        Difficult::Medium => {}
+        Difficult::Hard => {}
+    }
+
     loop {
         clear_background(WHITE);
         draw_form(offset, start_y, end_y, start_x, end_x);
-        set_numbers(offset, start_y, start_x, end_x, font_size, &matrix);
 
         let (mouse_x, mouse_y) = mouse_position();
         if !in_window(mouse_x, mouse_y, start_x as f32, start_y, end_x as f32, end_y) {
+            set_numbers(offset, start_y, start_x, end_x, font_size, &matrix, &marked_coord, &user_matrix, &empties);
+            if is_mouse_button_down(MouseButton::Left) {
+                marked_coord = vec![];
+            }
             next_frame().await;
-            continue
+            continue;
         }
+
         if is_mouse_button_down(MouseButton::Left) {
+            let (x, y) = coord_by_position(mouse_x, mouse_y, start_x as f32, start_y, offset as f32);
             clear_background(WHITE);
             draw_form(offset, start_y, end_y, start_x, end_x);
-            let num = num_by_position(mouse_x, mouse_y, start_x as f32, start_y, offset as f32, &matrix);
-            println!("click: {}", get_char_code(num));
-            let need_mark = coord_by_num(start_x as f32, start_y, offset as f32, &matrix, num);
-            for coord in need_mark {
-                draw_text(&get_char_code(num), coord[0], coord[1], font_size, RED);
+            let mut num = matrix[y][x];
+            let key = Key { x, y };
+            if user_matrix.contains_key( &key){
+                num = user_matrix.get(&key).unwrap().clone() - 1
+            } else {
+                if empties.contains_key(&key) {
+                    marked_coord = vec!([x, y]);
+                    set_numbers(offset, start_y, start_x, end_x, font_size, &matrix, &marked_coord, &user_matrix, &empties);
+                    next_frame().await;
+                    continue;
+                }
+            }
+            let need_mark = coord_by_num(&matrix, num);
+            set_numbers(offset, start_y, start_x, end_x, font_size, &matrix, &need_mark, &user_matrix, &empties);
+            marked_coord = vec!([x, y]);
+            next_frame().await;
+            continue;
+        }
+
+        if is_mouse_button_down(MouseButton::Right) {
+            let (x, y) = coord_by_position(mouse_x, mouse_y, start_x as f32, start_y, offset as f32);
+            clear_background(WHITE);
+            draw_form(offset, start_y, end_y, start_x, end_x);
+            let mut num = matrix[y][x];
+            let key = Key { x, y };
+            if user_matrix.contains_key( &key){
+                num = user_matrix.get(&key).unwrap().clone() - 1
+            } else {
+                if empties.contains_key(&key) {
+                    set_numbers(offset, start_y, start_x, end_x, font_size, &matrix, &marked_coord, &user_matrix, &empties);
+                    next_frame().await;
+                    continue;
+                }
+            }
+            let need_mark = coord_by_num(&matrix, num);
+            set_numbers(offset, start_y, start_x, end_x, font_size, &matrix, &need_mark, &user_matrix, &empties);
+            next_frame().await;
+            continue;
+        }
+
+        match get_last_key_pressed() {
+            None => {}
+            Some(code) => {
+                if marked_coord.is_empty() {
+                    next_frame().await;
+                    continue;
+                }
+                let key = Key { x: marked_coord[0][0], y: marked_coord[0][1] };
+                if !empties.contains_key(&key) {
+                    next_frame().await;
+                    continue
+                }
+                match code {
+                    KeyCode::Key1 => { user_matrix.insert(key, 1); }
+                    KeyCode::Key2 => { user_matrix.insert(key, 2); }
+                    KeyCode::Key3 => { user_matrix.insert(key, 3); }
+                    KeyCode::Key4 => { user_matrix.insert(key, 4); }
+                    KeyCode::Key5 => { user_matrix.insert(key, 5); }
+                    KeyCode::Key6 => { user_matrix.insert(key, 6); }
+                    KeyCode::Key7 => { user_matrix.insert(key, 7); }
+                    KeyCode::Key8 => { user_matrix.insert(key, 8); }
+                    KeyCode::Key9 => { user_matrix.insert(key, 9); }
+                    KeyCode::Kp1 => { user_matrix.insert(key, 1); }
+                    KeyCode::Kp2 => { user_matrix.insert(key, 2); }
+                    KeyCode::Kp3 => { user_matrix.insert(key, 3); }
+                    KeyCode::Kp4 => { user_matrix.insert(key, 4); }
+                    KeyCode::Kp5 => { user_matrix.insert(key, 5); }
+                    KeyCode::Kp6 => { user_matrix.insert(key, 6); }
+                    KeyCode::Kp7 => { user_matrix.insert(key, 7); }
+                    KeyCode::Kp8 => { user_matrix.insert(key, 8); }
+                    KeyCode::Kp9 => { user_matrix.insert(key, 9); }
+                    _ => {}
+                }
             }
         }
+
+        set_numbers(offset, start_y, start_x, end_x, font_size, &matrix, &marked_coord, &user_matrix, &empties);
         next_frame().await
     }
 }
 
-fn coord_by_num(start_x: f32, start_y: f32, offset: f32, matrix: &Vec<[u32; 9]>, num: u32) -> Vec<[f32; 2]> {
-    let mut data: Vec<[f32; 2]> = vec!();
+fn coord_by_num(matrix: &Vec<[u32; 9]>, num: u32) -> Vec<[usize; 2]> {
+    let mut data: Vec<[usize; 2]> = vec!();
     for y in (0..9).step_by(1) {
         for x in (0..9).step_by(1) {
             if num != matrix[y][x] {
-                continue
+                continue;
             }
-            data.push([x as f32 * offset + start_x, y as f32 * offset + start_y]);
+            data.push([x, y]);
         }
     }
     return data;
 }
 
-fn num_by_position(mouse_x: f32, mouse_y: f32, start_x: f32, start_y: f32, offset: f32, matrix: &Vec<[u32; 9]>) -> u32 {
+fn coord_by_position(mouse_x: f32, mouse_y: f32, start_x: f32, start_y: f32, offset: f32) -> (usize, usize) {
     let mut x = ((mouse_x - start_x as f32) / offset as f32) as usize;
     let mut y = ((mouse_y - start_y as f32) / offset as f32) as usize;
     if x > 8 {
@@ -57,29 +164,23 @@ fn num_by_position(mouse_x: f32, mouse_y: f32, start_x: f32, start_y: f32, offse
     if y > 8 {
         y = 8;
     }
-    if x < 0 {
-        x = 0;
-    }
-    if y < 0 {
-        y = 0;
-    }
-    return matrix[y][x];
+    return (x, y);
 }
 
-fn in_window(mouse_x:f32, mouse_y:f32, start_x:f32, start_y:f32, end_x:f32, end_y:f32) -> bool {
+fn in_window(mouse_x: f32, mouse_y: f32, start_x: f32, start_y: f32, end_x: f32, end_y: f32) -> bool {
     if mouse_x < start_x {
         return false;
     }
     if mouse_x > end_x {
         return false;
     }
-    if mouse_y > end_y{
+    if mouse_y > end_y {
         return false;
     }
     if mouse_y < start_y {
         return false;
     }
-    return true
+    return true;
 }
 
 
@@ -104,15 +205,42 @@ fn draw_form(offset: usize, start_y: f32, end_y: f32, start_x: usize, end_x: usi
     draw_line(end_x as f32, start_y, end_x as f32, end_y as f32, 2.0, BLACK);
 }
 
-fn set_numbers(offset: usize, start_y: f32, start_x: usize, end_x: usize, font_size: f32, matrix: &Vec<[u32; 9]>) {
+fn set_numbers(
+    offset: usize,
+    start_y: f32,
+    start_x: usize,
+    end_x: usize,
+    font_size: f32,
+    matrix: &Vec<[u32; 9]>,
+    need_mark: &Vec<[usize; 2]>,
+    user_matrix: &HashMap<Key, u32>,
+    empties: &HashMap<Key, bool>) {
     let mut y = start_y;
     let mut counter: usize = 0;
-    for x in (start_x..end_x).step_by(offset) {
+    for _ in (start_x..end_x).step_by(offset) {
         for i in (0..9).step_by(1) {
+            let mut val = get_char_code(matrix[counter][i]);
+            let mut color = BLACK;
+            for coord in need_mark {
+                if coord[0] == i && coord[1] == counter {
+                    color = RED;
+                }
+            }
+            for (key, v) in empties {
+                if key.x == i && key.y == counter {
+                    color = BLUE;
+                    val = "".to_owned();
+                }
+            }
+            for (key, v) in user_matrix {
+                if key.x == i && key.y == counter {
+                    color = BLUE;
+                    val = v.to_string();
+                }
+            }
             let text_start_x: f32 = start_x as f32 + (offset * i) as f32 + offset as f32 / 2.0 - font_size / 4.0;
             let text_start_y: f32 = y + offset as f32 - offset as f32 / 2.0 + font_size / 4.0;
-            draw_text(&get_char_code(matrix[counter][i]), text_start_x,
-                      text_start_y, font_size, BLACK);
+            draw_text(&val, text_start_x, text_start_y, font_size, color);
         }
         y += offset as f32;
         counter += 1;
