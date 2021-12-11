@@ -1,5 +1,10 @@
 use std::collections::HashMap;
 use macroquad::prelude::*;
+use macroquad::ui::{
+    hash, root_ui,
+    widgets::{self, Group},
+};
+use sudoku::Sudoku;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
 struct Key {
@@ -14,34 +19,28 @@ enum Difficult {
     Hard,
 }
 
-
 #[macroquad::main("Sudoku")]
 async fn main() {
-    let font_size: f32 = 30.0;
+    let font_size: f32 = 25.0;
     let steps = 9.0;
     let offset: usize = 40;
     let start_y: f32 = screen_height() / 2.0 - offset as f32 * steps / 2.0;
     let end_y: f32 = start_y as f32 + offset as f32 * steps;
     let start_x: usize = (screen_width() / 2.0 - offset as f32 * steps / 2.0) as usize;
     let end_x: usize = (start_x as f32 + offset as f32 * steps) as usize;
-    let matrix = create_matrix();
-    let mut user_matrix: HashMap<Key, u32> = HashMap::default();
+    let mut user_matrix: HashMap<Key, u8> = HashMap::default();
     let mut empties: HashMap<Key, bool> = HashMap::default();
     let mut marked_coord: Vec<[usize; 2]> = vec![];
-    let current_difficult = Difficult::SuperEasy;
+    let current_difficult = Difficult::Hard;
+    let sudoku = Sudoku::generate_filled();
+    let matrix = create_matrix(&sudoku);
 
-    match current_difficult {
-        Difficult::SuperEasy => {
-            for y in (0..9).step_by(3) {
-                for x in (0..9).step_by(3) {
-                    empties.insert(Key{x: x + rand::RandomRange::gen_range(0, 1), y: y}, false);
-                }
-            }
-        }
-        Difficult::Easy => {}
-        Difficult::Medium => {}
-        Difficult::Hard => {}
-    }
+    fill_empties(&sudoku, &mut empties, current_difficult);
+
+    let font = load_ttf_font("./examples/DancingScriptRegular.ttf")
+        .await
+        .unwrap();
+
 
     loop {
         clear_background(WHITE);
@@ -49,7 +48,7 @@ async fn main() {
 
         let (mouse_x, mouse_y) = mouse_position();
         if !in_window(mouse_x, mouse_y, start_x as f32, start_y, end_x as f32, end_y) {
-            set_numbers(offset, start_y, start_x, end_x, font_size, &matrix, &marked_coord, &user_matrix, &empties);
+            set_numbers(offset, start_y, start_x, end_x, font_size, &matrix, &marked_coord, &user_matrix, &empties, font.clone());
             if is_mouse_button_down(MouseButton::Left) {
                 marked_coord = vec![];
             }
@@ -57,24 +56,26 @@ async fn main() {
             continue;
         }
 
+        widgets::Button::new("Button").size(vec2(120., 70.));
+
         if is_mouse_button_down(MouseButton::Left) {
             let (x, y) = coord_by_position(mouse_x, mouse_y, start_x as f32, start_y, offset as f32);
             clear_background(WHITE);
             draw_form(offset, start_y, end_y, start_x, end_x);
             let mut num = matrix[y][x];
             let key = Key { x, y };
-            if user_matrix.contains_key( &key){
+            if user_matrix.contains_key(&key) {
                 num = user_matrix.get(&key).unwrap().clone() - 1
             } else {
                 if empties.contains_key(&key) {
                     marked_coord = vec!([x, y]);
-                    set_numbers(offset, start_y, start_x, end_x, font_size, &matrix, &marked_coord, &user_matrix, &empties);
+                    set_numbers(offset, start_y, start_x, end_x, font_size, &matrix, &marked_coord, &user_matrix, &empties, font.clone());
                     next_frame().await;
                     continue;
                 }
             }
             let need_mark = coord_by_num(&matrix, num);
-            set_numbers(offset, start_y, start_x, end_x, font_size, &matrix, &need_mark, &user_matrix, &empties);
+            set_numbers(offset, start_y, start_x, end_x, font_size, &matrix, &need_mark, &user_matrix, &empties, font.clone());
             marked_coord = vec!([x, y]);
             next_frame().await;
             continue;
@@ -86,17 +87,17 @@ async fn main() {
             draw_form(offset, start_y, end_y, start_x, end_x);
             let mut num = matrix[y][x];
             let key = Key { x, y };
-            if user_matrix.contains_key( &key){
+            if user_matrix.contains_key(&key) {
                 num = user_matrix.get(&key).unwrap().clone() - 1
             } else {
                 if empties.contains_key(&key) {
-                    set_numbers(offset, start_y, start_x, end_x, font_size, &matrix, &marked_coord, &user_matrix, &empties);
+                    set_numbers(offset, start_y, start_x, end_x, font_size, &matrix, &marked_coord, &user_matrix, &empties, font.clone());
                     next_frame().await;
                     continue;
                 }
             }
             let need_mark = coord_by_num(&matrix, num);
-            set_numbers(offset, start_y, start_x, end_x, font_size, &matrix, &need_mark, &user_matrix, &empties);
+            set_numbers(offset, start_y, start_x, end_x, font_size, &matrix, &need_mark, &user_matrix, &empties, font.clone());
             next_frame().await;
             continue;
         }
@@ -111,7 +112,7 @@ async fn main() {
                 let key = Key { x: marked_coord[0][0], y: marked_coord[0][1] };
                 if !empties.contains_key(&key) {
                     next_frame().await;
-                    continue
+                    continue;
                 }
                 match code {
                     KeyCode::Key1 => { user_matrix.insert(key, 1); }
@@ -137,12 +138,106 @@ async fn main() {
             }
         }
 
-        set_numbers(offset, start_y, start_x, end_x, font_size, &matrix, &marked_coord, &user_matrix, &empties);
+        set_numbers(offset, start_y, start_x, end_x, font_size, &matrix, &marked_coord, &user_matrix, &empties, font.clone());
         next_frame().await
     }
 }
 
-fn coord_by_num(matrix: &Vec<[u32; 9]>, num: u32) -> Vec<[usize; 2]> {
+fn fill_empties(sudoku: &Sudoku, empties: &mut HashMap<Key, bool>, dif: Difficult) {
+    let real_sudoku = Sudoku::generate_unique_from(sudoku.clone());
+
+    let mut grid_line: [u8; 81] = [0; 81];
+
+
+    match dif {
+        Difficult::SuperEasy => {
+            for (i, num) in real_sudoku.iter().enumerate() {
+                match num {
+                    None => {
+                        let result = rand::gen_range(0, 2);
+                        match result {
+                            1 => {
+                                grid_line[i] = 1
+                            }
+                            _ => {}
+                        }
+                    }
+                    Some(_n) => {
+                        grid_line[i] = 1
+                    }
+                }
+            }
+        }
+        Difficult::Easy => {
+            for (i, num) in real_sudoku.iter().enumerate() {
+                match num {
+                    None => {
+                        let result = rand::gen_range(0, 3);
+                        match result {
+                            1 => {
+                                grid_line[i] = 1
+                            }
+                            _ => {}
+                        }
+                    }
+                    Some(_n) => {
+                        grid_line[i] = 1
+                    }
+                }
+            }
+        }
+        Difficult::Medium => {
+            for (i, num) in real_sudoku.iter().enumerate() {
+                match num {
+                    None => {
+                        let result = rand::gen_range(0, 4);
+                        match result {
+                            1 => {
+                                grid_line[i] = 1
+                            }
+                            _ => {}
+                        }
+                    }
+                    Some(_n) => {
+                        grid_line[i] = 1
+                    }
+                }
+            }
+        }
+        Difficult::Hard => {
+            for (i, num) in real_sudoku.iter().enumerate() {
+                match num {
+                    None => {
+                        grid_line[i] = 0
+                    }
+                    Some(_n) => {
+                        grid_line[i] = 1
+                    }
+                }
+            }
+        }
+    }
+
+
+    for y in (0..9).step_by(1) {
+        for x in (0..9).step_by(1) {
+            let v = grid_line.get(x + (y * 9));
+            match v {
+                None => {}
+                Some(val) => {
+                    match val {
+                        0 => {
+                            empties.insert(Key { x, y }, true);
+                        }
+                        _ => {}
+                    }
+                }
+            };
+        }
+    }
+}
+
+fn coord_by_num(matrix: &Vec<[u8; 9]>, num: u8) -> Vec<[usize; 2]> {
     let mut data: Vec<[usize; 2]> = vec!();
     for y in (0..9).step_by(1) {
         for x in (0..9).step_by(1) {
@@ -194,15 +289,15 @@ fn draw_form(offset: usize, start_y: f32, end_y: f32, start_x: usize, end_x: usi
         let mut color = def_color;
         if x == start_x || x == end_x || counter % 3 == 0 {
             thickness *= 2.0;
-            color = BLACK;
+            color = GRAY;
         }
         draw_line(start_x as f32, y, end_x as f32, y, thickness, color);
         draw_line(x as f32, start_y, x as f32, end_y as f32, thickness, color);
         y += offset as f32;
         counter += 1;
     }
-    draw_line(start_x as f32, end_y as f32, end_x as f32, end_y as f32, 2.0, BLACK);
-    draw_line(end_x as f32, start_y, end_x as f32, end_y as f32, 2.0, BLACK);
+    draw_line(start_x as f32, end_y as f32, end_x as f32, end_y as f32, 2.0, GRAY);
+    draw_line(end_x as f32, start_y, end_x as f32, end_y as f32, 2.0, GRAY);
 }
 
 fn set_numbers(
@@ -211,10 +306,11 @@ fn set_numbers(
     start_x: usize,
     end_x: usize,
     font_size: f32,
-    matrix: &Vec<[u32; 9]>,
+    matrix: &Vec<[u8; 9]>,
     need_mark: &Vec<[usize; 2]>,
-    user_matrix: &HashMap<Key, u32>,
-    empties: &HashMap<Key, bool>) {
+    user_matrix: &HashMap<Key, u8>,
+    empties: &HashMap<Key, bool>,
+    font: Font) {
     let mut y = start_y;
     let mut counter: usize = 0;
     for _ in (start_x..end_x).step_by(offset) {
@@ -226,7 +322,7 @@ fn set_numbers(
                     color = RED;
                 }
             }
-            for (key, v) in empties {
+            for (key, _) in empties {
                 if key.x == i && key.y == counter {
                     color = BLUE;
                     val = "".to_owned();
@@ -240,26 +336,42 @@ fn set_numbers(
             }
             let text_start_x: f32 = start_x as f32 + (offset * i) as f32 + offset as f32 / 2.0 - font_size / 4.0;
             let text_start_y: f32 = y + offset as f32 - offset as f32 / 2.0 + font_size / 4.0;
-            draw_text(&val, text_start_x, text_start_y, font_size, color);
+            draw_text_ex(&val, text_start_x, text_start_y, TextParams {
+                font_size: font_size as u16,
+                font,
+                color,
+                ..Default::default()
+            });
         }
         y += offset as f32;
         counter += 1;
     }
 }
 
-fn create_matrix() -> Vec<[u32; 9]> {
-    let mut data: Vec<[u32; 9]> = vec!();
-    for _ in (0..9).step_by(1) {
-        let mut new_line: [u32; 9] = [0; 9];
-        for i in (0..9).step_by(1) {
-            new_line[i] = rand::RandomRange::gen_range(0, 8);
+
+fn create_matrix(grid: &sudoku::Sudoku) -> Vec<[u8; 9]> {
+    let mut data: Vec<[u8; 9]> = vec!();
+    let mut grid_line: [u8; 81] = [0; 81];
+
+    for (i, num) in grid.iter().enumerate() {
+        match num {
+            None => {}
+            Some(n) => {
+                grid_line[i] = n
+            }
+        }
+    }
+    for y in (0..9).step_by(1) {
+        let mut new_line: [u8; 9] = [0; 9];
+        for x in (0..9).step_by(1) {
+            new_line[x] = grid_line[x + (y * 9)] - 1
         }
         data.push(new_line);
     }
     return data;
 }
 
-fn get_char_code(c: u32) -> String {
+fn get_char_code(c: u8) -> String {
     let chars: [String; 9] = ["1".to_owned(), "2".to_owned(), "3".to_owned(), "4".to_owned(),
         "5".to_owned(), "6".to_owned(), "7".to_owned(), "8".to_owned(), "9".to_owned()];
     let d = chars.get(c as usize).unwrap();

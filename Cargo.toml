@@ -1,5 +1,5 @@
 [package]
-name = "sudoku"
+name = "sudoku_vk"
 version = "0.1.0"
 authors = ["artem <artem@webart-tech.ru>"]
 edition = "2018"
@@ -8,3 +8,7 @@ edition = "2018"
 
 [dependencies]
 macroquad = "0.3"
+sudoku = "0.7.0"
+
+[profile.dev.package.'*']
+opt-level = 3
