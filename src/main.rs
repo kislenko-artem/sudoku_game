@@ -92,7 +92,14 @@ impl Game {
             return;
         }
 
-        match get_last_key_pressed() {
+        self.fill_num(get_last_key_pressed());
+
+        self.set_numbers(vec![], font.clone());
+    }
+
+
+    fn fill_num(&mut self, code: Option<KeyCode>) {
+        match code {
             None => {}
             Some(code) => {
                 if self.marked_coord.is_empty() {
@@ -125,10 +132,7 @@ impl Game {
                 }
             }
         }
-
-        self.set_numbers(vec![], font.clone());
     }
-
 
     fn fill_empties(sudoku: &Sudoku, empties: &mut HashMap<Key, bool>, dif: Difficult) {
         let real_sudoku = Sudoku::generate_unique_from(sudoku.clone());
@@ -287,6 +291,41 @@ impl Game {
         draw_line(self.end_x as f32, self.start_y, self.end_x as f32, self.end_y as f32, 2.0, GRAY);
     }
 
+    fn draw_numbers(&mut self) {
+        let y = self.end_y as f32 + self.offset as f32;
+        let r = self.offset as f32 / 2.0;
+        let first_x = self.start_x as f32 + self.offset as f32 / 2.0;
+        let offset = 10.0;
+
+        if root_ui().button(Vec2::new(first_x, y), "1")  {
+            self.fill_num(Option::Some(KeyCode::Key1));
+        }
+        if root_ui().button(Vec2::new(first_x + offset, y), "2") {
+            self.fill_num(Option::Some(KeyCode::Key2));
+        }
+        if root_ui().button(Vec2::new(first_x + offset * 2.0, y), "3") {
+            self.fill_num(Option::Some(KeyCode::Key3));
+        }
+        if root_ui().button(Vec2::new(first_x + offset * 3.0, y), "4") {
+            self.fill_num(Option::Some(KeyCode::Key4));
+        }
+        if root_ui().button(Vec2::new(first_x + offset * 4.0, y), "5") {
+            self.fill_num(Option::Some(KeyCode::Key5));
+        }
+        if root_ui().button(Vec2::new(first_x + offset * 5.0, y), "6") {
+            self.fill_num(Option::Some(KeyCode::Key6));
+        }
+        if root_ui().button(Vec2::new(first_x + offset * 6.0, y), "7") {
+            self.fill_num(Option::Some(KeyCode::Key7));
+        }
+        if root_ui().button(Vec2::new(first_x + offset * 7.0, y), "8") {
+            self.fill_num(Option::Some(KeyCode::Key8));
+        }
+        if root_ui().button(Vec2::new(first_x + offset * 8.0, y), "9") {
+            self.fill_num(Option::Some(KeyCode::Key9));
+        }
+    }
+
     fn set_numbers(&self, mut need_mark: Vec<[usize; 2]>, font: Font) {
         let mut y = self.start_y;
         if need_mark.len() == 0 {
@@ -406,6 +445,7 @@ async fn main() {
                 }
             }
             Screens::Game => {
+                g.draw_numbers();
                 g.game_screen(font, mouse_x, mouse_y);
             }
         }
