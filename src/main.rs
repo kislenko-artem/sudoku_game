@@ -68,43 +68,27 @@ impl Game {
             return;
         }
 
-        if is_mouse_button_down(MouseButton::Left) {
+        if is_mouse_button_down(MouseButton::Left) || is_mouse_button_down(MouseButton::Right)  {
             let (x, y) = self.coord_by_position(mouse_x, mouse_y);
-            clear_background(WHITE);
-            self.draw_form();
-            let mut num = self.matrix[y][x];
-            let key = Key { x, y };
-            if self.user_matrix.contains_key(&key) {
-                num = self.user_matrix.get(&key).unwrap().clone() - 1
-            } else {
-                if self.empties.contains_key(&key) {
-                    self.marked_coord = vec!([x, y]);
-                    self.set_numbers(vec![], font.clone());
-                    return;
-                }
+            if is_mouse_button_down(MouseButton::Left) {
+                self.marked_coord = vec!([x, y]);
             }
-            let need_mark = self.coord_by_num(num);
-            self.set_numbers(need_mark, font.clone());
-            self.marked_coord = vec!([x, y]);
-            return;
-        }
+            self.draw_form();
 
-        if is_mouse_button_down(MouseButton::Right) {
-            let (x, y) = self.coord_by_position(mouse_x, mouse_y);
-            clear_background(WHITE);
-            self.draw_form();
-            let mut num = self.matrix[y][x];
             let key = Key { x, y };
+            if self.empties.contains_key(&key) {
+                self.set_numbers(self.marked_coord.clone(), font.clone());
+                return;
+            }
+
+            let mut num = self.matrix[y][x];
             if self.user_matrix.contains_key(&key) {
                 num = self.user_matrix.get(&key).unwrap().clone() - 1
-            } else {
-                if self.empties.contains_key(&key) {
-                    self.set_numbers(vec![], font.clone());
-                    return;
-                }
             }
             let need_mark = self.coord_by_num(num);
+
             self.set_numbers(need_mark, font.clone());
+
             return;
         }
 
@@ -316,6 +300,11 @@ impl Game {
                 for coord in &need_mark {
                     if coord[0] == i && coord[1] == counter {
                         color = RED;
+                    }
+                }
+                for coord in &self.marked_coord {
+                    if coord[0] == i && coord[1] == counter {
+                        draw_rectangle(self.start_x as f32 + (self.offset * i) as f32, y, self.offset as f32, self.offset as f32, GREEN);
                     }
                 }
                 for (key, _) in &self.empties {
