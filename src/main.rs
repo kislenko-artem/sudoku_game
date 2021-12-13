@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use macroquad::prelude::*;
-use macroquad::ui::{root_ui};
+use macroquad::ui::{root_ui, Skin};
 use sudoku::Sudoku;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -42,6 +42,8 @@ impl Game {
         let sudoku = Sudoku::generate_filled();
         let mut empties = Default::default();
         Game::fill_empties(&sudoku, &mut empties, current_difficult);
+
+
         return Game {
             font_size: 25.0,
             start_y,
@@ -297,7 +299,7 @@ impl Game {
         let first_x = self.start_x as f32 + self.offset as f32 / 2.0;
         let offset = 10.0;
 
-        if root_ui().button(Vec2::new(first_x, y), "1")  {
+        if root_ui().button(Vec2::new(first_x, y), "1") {
             self.fill_num(Option::Some(KeyCode::Key1));
         }
         if root_ui().button(Vec2::new(first_x + offset, y), "2") {
@@ -415,6 +417,28 @@ async fn main() {
     let mut current_screen: Screens = Screens::Start;
     let mut g = Game::new(screen_height(), screen_width(), Difficult::SuperEasy);
 
+    let button_style = root_ui()
+        .style_builder()
+        .background(Image::from_file_with_format(
+            include_bytes!("../button.png"),
+            None,
+        ))
+        //.background_margin(RectOffset::new(16.0, 8.0, 16.0, 8.0))
+        //.text_color(Color::from_rgba(180, 180, 100, 255))
+        .margin(RectOffset::new(7.0, 7.0, 0.0, 0.0))
+        .font_size(30)
+        .build();
+
+    let start_skin = Skin {
+        ..root_ui().default_skin()
+    };
+
+    let game_skin = Skin {
+        button_style,
+        ..root_ui().default_skin()
+    };
+
+
     let font = load_ttf_font("./examples/DancingScriptRegular.ttf")
         .await
         .unwrap();
@@ -426,6 +450,7 @@ async fn main() {
         let (mouse_x, mouse_y) = mouse_position();
         match current_screen {
             Screens::Start => {
+                root_ui().push_skin(&start_skin);
                 root_ui().label(None, "Pick difficult:");
                 if root_ui().button(None, "SuperEasy") {
                     g.current_difficult = Difficult::SuperEasy;
@@ -445,6 +470,7 @@ async fn main() {
                 }
             }
             Screens::Game => {
+                root_ui().push_skin(&game_skin);
                 g.draw_numbers();
                 g.game_screen(font, mouse_x, mouse_y);
             }
