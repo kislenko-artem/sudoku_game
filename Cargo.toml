@@ -10,5 +10,6 @@ edition = "2018"
 macroquad = "0.3"
 sudoku = "0.7.0"
 
+
 [profile.dev.package.'*']
 opt-level = 3
