@@ -21,7 +21,7 @@ var clipboard = null;
 var plugins = [];
 var wasm_memory;
 
-var high_dpi = false;
+var high_dpi = true;
 
 canvas.focus();
 
@@ -556,11 +556,7 @@ function into_sapp_keycode(key_code) {
 }
 
 function dpi_scale()  {
-    if (high_dpi) {
-        return window.devicePixelRatio || 1.0;
-    } else {
-        return 1.0;
-    }
+    return 1.0;
 }
 
 function texture_size(internalFormat, width, height) {
@@ -581,7 +577,6 @@ function mouse_relative_position(clientX, clientY) {
 
     var x = (clientX - targetRect.left) * dpi_scale();
     var y = (clientY - targetRect.top) * dpi_scale();
-
     return { x, y };
 }
 
@@ -1097,6 +1092,9 @@ var importObject = {
                 var relative_position = mouse_relative_position(event.clientX, event.clientY);
                 var x = relative_position.x;
                 var y = relative_position.y;
+
+                console.log("clientX", x, event.clientX)
+                console.log("clientY", y, event.clientY)
 
                 var btn = into_sapp_mousebutton(event.button);
                 wasm_exports.mouse_up(x, y, btn);

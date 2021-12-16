@@ -59,7 +59,7 @@ impl Game {
         };
     }
 
-    fn game_screen(&mut self, font: Font, mouse_x: f32, mouse_y: f32) {
+    fn game_screen(&mut self, font: Font, mut mouse_x: f32, mut mouse_y: f32) {
         self.draw_form();
 
         if !self.in_window(mouse_x, mouse_y) {
@@ -70,9 +70,37 @@ impl Game {
             return;
         }
 
-        if is_mouse_button_down(MouseButton::Left) || is_mouse_button_down(MouseButton::Right) {
-            let (x, y) = self.coord_by_position(mouse_x, mouse_y);
-            if is_mouse_button_down(MouseButton::Left) {
+        let mut is_left = false;
+        let mut is_right = false;
+
+        for touch in touches() {
+            match touch.phase {
+                TouchPhase::Started => {
+                    is_left = true;
+                }
+                TouchPhase::Stationary => {
+                    info!("Stationary");
+                }
+                TouchPhase::Moved => {}
+                TouchPhase::Ended => {
+                    is_left = false;
+                    mouse_x = touch.position[0];
+                    mouse_y = touch.position[1];
+                }
+                TouchPhase::Cancelled => {}
+            };
+        }
+        let  (x, y) = self.coord_by_position(mouse_x, mouse_y);
+
+        if is_mouse_button_down(MouseButton::Left)  {
+            is_left = true
+        }
+        if is_mouse_button_down(MouseButton::Left)  {
+            is_right = true
+        }
+
+        if is_left || is_right {
+            if is_left {
                 self.marked_coord = vec!([x, y]);
             }
             self.draw_form();
@@ -93,6 +121,7 @@ impl Game {
 
             return;
         }
+
 
         self.fill_num(get_last_key_pressed());
 
@@ -459,6 +488,7 @@ async fn main() {
         clear_background(WHITE);
 
         let (mouse_x, mouse_y) = mouse_position();
+        // debug!("{} {} {} {}", mouse_x, mouse_y, screen_width(), screen_height());
         match current_screen {
             Screens::Start => {
                 root_ui().push_skin(&start_skin);
