@@ -1,0 +1,10 @@
+version: '3'
+services:
+
+  nginx:
+    image: nginx
+    restart: unless-stopped
+    ports:
+      - "9001:80"
+    volumes:
+      - ./static:/usr/share/nginx/html

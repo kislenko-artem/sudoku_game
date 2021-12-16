@@ -450,7 +450,7 @@ async fn main() {
     };
 
 
-    let font = load_ttf_font("./examples/DancingScriptRegular.ttf")
+    let font = load_ttf_font("./DancingScriptRegular.ttf")
         .await
         .unwrap();
 
