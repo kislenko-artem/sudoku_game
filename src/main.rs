@@ -39,7 +39,7 @@ impl Game {
         let end_y: f32 = start_y as f32 + offset as f32 * steps;
         let start_x: usize = (screen_width / 2.0 - offset as f32 * steps / 2.0) as usize;
         let end_x: usize = (start_x as f32 + offset as f32 * steps) as usize;
-        let sudoku = Sudoku::generate_filled();
+        let sudoku = Sudoku::generate_solved();
         let mut empties = Default::default();
         Game::fill_empties(&sudoku, &mut empties, current_difficult);
 
@@ -137,7 +137,7 @@ impl Game {
     }
 
     fn fill_empties(sudoku: &Sudoku, empties: &mut HashMap<Key, bool>, dif: Difficult) {
-        let real_sudoku = Sudoku::generate_unique_from(sudoku.clone());
+        let real_sudoku = Sudoku::generate_from(sudoku.clone());
 
         let mut grid_line: [u8; 81] = [0; 81];
 
@@ -147,7 +147,7 @@ impl Game {
                 for (i, num) in real_sudoku.iter().enumerate() {
                     match num {
                         None => {
-                            let result = macroquad::rand::gen_range(0, 2);
+                            let result = rand::RandomRange::gen_range(0, 2);
                             match result {
                                 1 => {
                                     grid_line[i] = 1
@@ -165,7 +165,7 @@ impl Game {
                 for (i, num) in real_sudoku.iter().enumerate() {
                     match num {
                         None => {
-                            let result = macroquad::rand::gen_range(0, 3);
+                            let result = rand::RandomRange::gen_range(0, 3);
                             match result {
                                 1 => {
                                     grid_line[i] = 1
@@ -183,7 +183,7 @@ impl Game {
                 for (i, num) in real_sudoku.iter().enumerate() {
                     match num {
                         None => {
-                            let result = macroquad::rand::gen_range(0, 4);
+                            let result = rand::RandomRange::gen_range(0, 4);
                             match result {
                                 1 => {
                                     grid_line[i] = 1
