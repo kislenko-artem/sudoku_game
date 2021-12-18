@@ -30,9 +30,20 @@ struct Game {
     current_difficult: Difficult,
     matrix: Vec<[u8; 9]>,
     no_valid: Vec<[usize; 2]>,
+    current_screen: Screens,
 }
 
 impl Game {
+    fn regenerate(&mut self){
+        let sudoku = Sudoku::generate_solved();
+        let mut empties = Default::default();
+        Game::fill_empties(&sudoku, &mut empties, self.current_difficult);
+        self.user_matrix = Default::default();
+        self.empties = empties;
+        self.marked_coord =vec![];
+        self.matrix = Game::create_matrix(&sudoku);
+        self.no_valid = vec![];
+    }
     fn new(screen_height: f32, screen_width: f32, current_difficult: Difficult) -> Self {
         let steps = 9.0;
         let offset: usize = 40;
@@ -58,6 +69,7 @@ impl Game {
             current_difficult,
             matrix: Game::create_matrix(&sudoku),
             no_valid: vec![],
+            current_screen:Screens::Start
         };
     }
 
@@ -407,8 +419,11 @@ impl Game {
         if root_ui().button(Vec2::new(first_x, y + offset), "Validate") {
             self.validate();
         }
-        if root_ui().button(Vec2::new(first_x + offset as f32 * 5.0, y + offset), "Hint") {
+        if root_ui().button(Vec2::new(first_x + offset as f32 * 4.0, y + offset), "Hint") {
             self.hint();
+        }
+        if root_ui().button(Vec2::new(first_x + offset as f32 * 7.0, y + offset), "Back") {
+            self.current_screen = Screens::Start;
         }
     }
 
@@ -503,7 +518,6 @@ enum Screens {
 
 #[macroquad::main("Sudoku")]
 async fn main() {
-    let mut current_screen: Screens = Screens::Start;
     let mut g = Game::new(screen_height(), screen_width(), Difficult::SuperEasy);
     let start_button_style = root_ui()
         .style_builder()
@@ -550,7 +564,7 @@ async fn main() {
 
         let (mouse_x, mouse_y) = mouse_position();
         // debug!("{} {} {} {}", mouse_x, mouse_y, screen_width(), screen_height());
-        match current_screen {
+        match g.current_screen {
             Screens::Start => {
                 root_ui().push_skin(&start_skin);
 
@@ -558,19 +572,23 @@ async fn main() {
                 root_ui().label(vec2(center, 50.0), "Pick difficult:");
                 if root_ui().button(vec2(center, 70.0), "Beginner") {
                     g.current_difficult = Difficult::SuperEasy;
-                    current_screen = Screens::Game;
+                    g.regenerate();
+                    g.current_screen = Screens::Game;
                 }
                 if root_ui().button(vec2(center, 130.0), "  Easy  ") {
                     g.current_difficult = Difficult::Easy;
-                    current_screen = Screens::Game;
+                    g.regenerate();
+                    g.current_screen = Screens::Game;
                 }
                 if root_ui().button(vec2(center, 190.0), " Medium ") {
                     g.current_difficult = Difficult::Medium;
-                    current_screen = Screens::Game;
+                    g.regenerate();
+                    g.current_screen = Screens::Game;
                 }
                 if root_ui().button(vec2(center, 250.0), "  Hard  ") {
                     g.current_difficult = Difficult::Hard;
-                    current_screen = Screens::Game;
+                    g.regenerate();
+                    g.current_screen = Screens::Game;
                 }
             }
             Screens::Game => {
