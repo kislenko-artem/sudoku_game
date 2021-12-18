@@ -3,7 +3,7 @@ use macroquad::prelude::*;
 use macroquad::ui::{root_ui, Skin};
 use sudoku::Sudoku;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 struct Key {
     x: usize,
     y: usize,
@@ -29,6 +29,7 @@ struct Game {
     marked_coord: Vec<[usize; 2]>,
     current_difficult: Difficult,
     matrix: Vec<[u8; 9]>,
+    no_valid: Vec<[usize; 2]>,
 }
 
 impl Game {
@@ -56,13 +57,14 @@ impl Game {
             marked_coord: vec![],
             current_difficult,
             matrix: Game::create_matrix(&sudoku),
+            no_valid: vec![],
         };
     }
 
     fn game_screen(&mut self, font: Font, mut mouse_x: f32, mut mouse_y: f32) {
         self.draw_form();
 
-        if !self.in_window(mouse_x, mouse_y) {
+        if !self.in_window(mouse_x, mouse_y){
             self.set_numbers(vec![], font.clone());
             if is_mouse_button_down(MouseButton::Left) {
                 self.marked_coord = vec![];
@@ -322,8 +324,56 @@ impl Game {
         draw_line(self.end_x as f32, self.start_y, self.end_x as f32, self.end_y as f32, 2.0, GRAY);
     }
 
+    fn hint(&mut self) {
+        let mut need_mark: [usize; 2] = [9, 9];
+        if self.marked_coord.len() == 1 {
+            need_mark = self.marked_coord[0]
+        } else {
+            for (key, _) in &self.empties {
+                if self.user_matrix.contains_key(&key) {
+                    continue
+                }
+                need_mark = [key.x, key.y];
+                break;
+            }
+        }
+        if need_mark[0] == 9 {
+            return;
+        }
+        let num = self.matrix[need_mark[1]][need_mark[0]];
+
+        self.user_matrix.insert(Key{x: need_mark[0], y: need_mark[1]}, num + 1);
+
+        return;
+
+    }
+
+    fn validate(&mut self) {
+        self.no_valid = vec![];
+        for y in (0..9).step_by(1) {
+            for x in (0..9).step_by(1) {
+                let key = Key{x, y};
+                if !self.user_matrix.contains_key(&key) {
+                    continue
+                }
+                let num = self.user_matrix.get(&Key{x, y});
+                match num {
+                    None => {
+                        continue
+                    }
+                    Some(v) => {
+                        if self.matrix[y][x] == v.clone() - 1 {
+                            continue
+                        }
+                        self.no_valid.push([x, y])
+                    }
+                }
+            }
+        }
+    }
+
     fn draw_numbers(&mut self) {
-        let y = self.end_y as f32 + self.offset as f32;
+        let y = self.end_y as f32 + self.offset as f32 / 2.0;
         let first_x = self.start_x as f32;
         let offset = self.offset as f32;
 
@@ -353,6 +403,12 @@ impl Game {
         }
         if root_ui().button(Vec2::new(first_x + offset * 8.0, y), "9") {
             self.fill_num(Option::Some(KeyCode::Key9));
+        }
+        if root_ui().button(Vec2::new(first_x, y + offset), "Validate") {
+            self.validate();
+        }
+        if root_ui().button(Vec2::new(first_x + offset as f32 * 5.0, y + offset), "Hint") {
+            self.hint();
         }
     }
 
@@ -386,6 +442,11 @@ impl Game {
                     if key.x == i && key.y == counter {
                         color = BLUE;
                         val = v.to_string();
+                    }
+                }
+                for coord in &self.no_valid {
+                    if coord[0] == i && coord[1] == counter {
+                        color = RED;
                     }
                 }
                 let text_start_x: f32 = self.start_x as f32 + (self.offset * i) as f32 + self.offset as f32 / 2.0 - self.font_size / 4.0;
