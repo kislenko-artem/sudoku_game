@@ -34,13 +34,13 @@ struct Game {
 }
 
 impl Game {
-    fn regenerate(&mut self){
+    fn regenerate(&mut self) {
         let sudoku = Sudoku::generate_solved();
         let mut empties = Default::default();
         Game::fill_empties(&sudoku, &mut empties, self.current_difficult);
         self.user_matrix = Default::default();
         self.empties = empties;
-        self.marked_coord =vec![];
+        self.marked_coord = vec![];
         self.matrix = Game::create_matrix(&sudoku);
         self.no_valid = vec![];
     }
@@ -69,14 +69,14 @@ impl Game {
             current_difficult,
             matrix: Game::create_matrix(&sudoku),
             no_valid: vec![],
-            current_screen:Screens::Start
+            current_screen: Screens::Start,
         };
     }
 
     fn game_screen(&mut self, font: Font, mut mouse_x: f32, mut mouse_y: f32) {
         self.draw_form();
 
-        if !self.in_window(mouse_x, mouse_y){
+        if !self.in_window(mouse_x, mouse_y) {
             self.set_numbers(vec![], font.clone());
             if is_mouse_button_down(MouseButton::Left) {
                 self.marked_coord = vec![];
@@ -104,12 +104,12 @@ impl Game {
                 TouchPhase::Cancelled => {}
             };
         }
-        let  (x, y) = self.coord_by_position(mouse_x, mouse_y);
+        let (x, y) = self.coord_by_position(mouse_x, mouse_y);
 
-        if is_mouse_button_down(MouseButton::Left)  {
+        if is_mouse_button_down(MouseButton::Left) {
             is_left = true
         }
-        if is_mouse_button_down(MouseButton::Left)  {
+        if is_mouse_button_down(MouseButton::Left) {
             is_right = true
         }
 
@@ -155,6 +155,9 @@ impl Game {
                     return;
                 }
                 match code {
+                    KeyCode::Delete => { self.user_matrix.remove(&key); }
+                    KeyCode::KpDecimal => { self.user_matrix.remove(&key); }
+                    KeyCode::Backspace => { self.user_matrix.remove(&key); }
                     KeyCode::Key1 => { self.user_matrix.insert(key, 1); }
                     KeyCode::Key2 => { self.user_matrix.insert(key, 2); }
                     KeyCode::Key3 => { self.user_matrix.insert(key, 3); }
@@ -343,7 +346,7 @@ impl Game {
         } else {
             for (key, _) in &self.empties {
                 if self.user_matrix.contains_key(&key) {
-                    continue
+                    continue;
                 }
                 need_mark = [key.x, key.y];
                 break;
@@ -354,28 +357,27 @@ impl Game {
         }
         let num = self.matrix[need_mark[1]][need_mark[0]];
 
-        self.user_matrix.insert(Key{x: need_mark[0], y: need_mark[1]}, num + 1);
+        self.user_matrix.insert(Key { x: need_mark[0], y: need_mark[1] }, num + 1);
 
         return;
-
     }
 
     fn validate(&mut self) {
         self.no_valid = vec![];
         for y in (0..9).step_by(1) {
             for x in (0..9).step_by(1) {
-                let key = Key{x, y};
+                let key = Key { x, y };
                 if !self.user_matrix.contains_key(&key) {
-                    continue
+                    continue;
                 }
-                let num = self.user_matrix.get(&Key{x, y});
+                let num = self.user_matrix.get(&Key { x, y });
                 match num {
                     None => {
-                        continue
+                        continue;
                     }
                     Some(v) => {
                         if self.matrix[y][x] == v.clone() - 1 {
-                            continue
+                            continue;
                         }
                         self.no_valid.push([x, y])
                     }
@@ -415,6 +417,9 @@ impl Game {
         }
         if root_ui().button(Vec2::new(first_x + offset * 8.0, y), "9") {
             self.fill_num(Option::Some(KeyCode::Key9));
+        }
+        if root_ui().button(Vec2::new(first_x + offset * 9.0, y), "X") {
+            self.fill_num(Option::Some(KeyCode::Delete));
         }
         if root_ui().button(Vec2::new(first_x, y + offset), "Validate") {
             self.validate();
