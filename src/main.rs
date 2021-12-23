@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use macroquad::prelude::*;
-use macroquad::ui::{root_ui, Skin};
+use macroquad::ui::{root_ui, Skin, Style, StyleBuilder, widgets};
+
 use sudoku::Sudoku;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -524,20 +525,40 @@ enum Screens {
 #[macroquad::main("Sudoku")]
 async fn main() {
     let mut g = Game::new(screen_height(), screen_width(), Difficult::SuperEasy);
+
+
+    let font = load_ttf_font("./assets/Montserrat-Black.ttf")
+        .await
+        .unwrap();
+
+    let logo: Texture2D = load_texture("assets/logo.png").await.unwrap();
+    let right_ar: Texture2D = load_texture("assets/right_ar.png").await.unwrap();
+    let left_ar: Texture2D = load_texture("assets/left_ar.png").await.unwrap();
+    let button: Texture2D = load_texture("assets/button.png").await.unwrap();
+
     let start_button_style = root_ui()
         .style_builder()
         .background(Image::from_file_with_format(
-            include_bytes!("../button.png"),
+            include_bytes!("../assets/button.png"),
             None,
         ))
-        //.background_margin(RectOffset::new(0.0, 0.0, 20.0, 20.0))
         .text_color(Color::from_rgba(255, 255, 255, 255))
-        .margin(RectOffset::new(35.0, 25.0, 15.0, 15.0))
         .font_size(20)
+        .margin(RectOffset::new(20.0, 110.0, 11.0, 11.0))
+        .font(include_bytes!("../assets/Montserrat-Regular.ttf")).unwrap()
         .build();
+
+    let start_label_style = root_ui()
+        .style_builder()
+        .text_color(Color::from_rgba(125, 208, 255, 100))
+        .font_size(20)
+        .font(include_bytes!("../assets/Montserrat-Regular.ttf")).unwrap()
+        .build();
+
 
     let start_skin = Skin {
         button_style: start_button_style,
+        label_style: start_label_style,
         ..root_ui().default_skin()
     };
 
@@ -558,12 +579,6 @@ async fn main() {
         ..root_ui().default_skin()
     };
 
-
-    let font = load_ttf_font("./DancingScriptRegular.ttf")
-        .await
-        .unwrap();
-
-
     loop {
         clear_background(WHITE);
 
@@ -573,28 +588,57 @@ async fn main() {
             Screens::Start => {
                 root_ui().push_skin(&start_skin);
 
-                let center = screen_width() / 2.0 - 50.0;
-                root_ui().label(vec2(center, 50.0), "Pick difficult:");
-                if root_ui().button(vec2(center, 70.0), "Beginner") {
+                let center_x = screen_width() / 2.0;
+                let center_y = screen_height() / 2.0;
+                draw_texture(
+                    logo,
+                    center_x - logo.width() / 2.,
+                    center_y - logo.height() / 2.,
+                    WHITE,
+                );
+                draw_rectangle(0.0, center_y + logo.height() / 1.5, screen_width(), 60.0, Color::from_rgba(248, 248, 248, 100));
+                draw_texture(
+                    right_ar,
+                    center_x + screen_width() / 4. ,
+                    center_y  + 110.,
+                    WHITE,
+                );
+                root_ui().label(vec2(center_x - logo.width() / 3.0, center_y + 110.), "Beginner");
+                //draw_text("Beginner", screen_width() / 2. - logo.width() / 2., screen_height() / 2.  + 120., 20., Color::from_rgba(125, 208, 255, 100));
+                draw_texture(
+                    left_ar,
+                    center_x - screen_width() / 4. ,
+                    center_y + 110.,
+                    WHITE,
+                );
+                // widgets::Button::new("New Game").position(vec2(center_x - button.width() / 2., center_y + 200.)).ui(&mut root_ui());
+
+                if root_ui().button(vec2(center_x - button.width() / 2., center_y + 200.), "New Game") {
                     g.current_difficult = Difficult::SuperEasy;
                     g.regenerate();
                     g.current_screen = Screens::Game;
                 }
-                if root_ui().button(vec2(center, 130.0), "  Easy  ") {
-                    g.current_difficult = Difficult::Easy;
-                    g.regenerate();
-                    g.current_screen = Screens::Game;
-                }
-                if root_ui().button(vec2(center, 190.0), " Medium ") {
-                    g.current_difficult = Difficult::Medium;
-                    g.regenerate();
-                    g.current_screen = Screens::Game;
-                }
-                if root_ui().button(vec2(center, 250.0), "  Hard  ") {
-                    g.current_difficult = Difficult::Hard;
-                    g.regenerate();
-                    g.current_screen = Screens::Game;
-                }
+
+                // if root_ui().button(vec2(center, 70.0), "Beginner") {
+                //     g.current_difficult = Difficult::SuperEasy;
+                //     g.regenerate();
+                //     g.current_screen = Screens::Game;
+                // }
+                // if root_ui().button(vec2(center, 130.0), "  Easy  ") {
+                //     g.current_difficult = Difficult::Easy;
+                //     g.regenerate();
+                //     g.current_screen = Screens::Game;
+                // }
+                // if root_ui().button(vec2(center, 190.0), " Medium ") {
+                //     g.current_difficult = Difficult::Medium;
+                //     g.regenerate();
+                //     g.current_screen = Screens::Game;
+                // }
+                // if root_ui().button(vec2(center, 250.0), "  Hard  ") {
+                //     g.current_difficult = Difficult::Hard;
+                //     g.regenerate();
+                //     g.current_screen = Screens::Game;
+                // }
             }
             Screens::Game => {
                 root_ui().push_skin(&game_skin);

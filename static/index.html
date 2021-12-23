@@ -18,6 +18,13 @@
             z-index: 0;
         }
     </style>
+    <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
+
+    <script>
+        // Sends event to client
+        vkBridge.send('VKWebAppInit');
+        vkBridge.subscribe(e => console.log(e));
+    </script>
 </head>
 
 <body>
