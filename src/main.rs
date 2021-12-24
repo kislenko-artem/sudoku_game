@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use macroquad::prelude::*;
-use macroquad::ui::{root_ui, Skin, Style, StyleBuilder, widgets};
+use macroquad::ui::{root_ui, Skin};
 
 use sudoku::Sudoku;
 
@@ -527,14 +527,32 @@ async fn main() {
     let mut g = Game::new(screen_height(), screen_width(), Difficult::SuperEasy);
 
 
-    let font = load_ttf_font("./assets/Montserrat-Black.ttf")
+    let font = load_ttf_font("./assets/ofont.ru_Montserrat.ttf")
         .await
         .unwrap();
 
     let logo: Texture2D = load_texture("assets/logo.png").await.unwrap();
-    let right_ar: Texture2D = load_texture("assets/right_ar.png").await.unwrap();
-    let left_ar: Texture2D = load_texture("assets/left_ar.png").await.unwrap();
     let button: Texture2D = load_texture("assets/button.png").await.unwrap();
+
+    let left_ar_button_style = root_ui()
+        .style_builder()
+        .background(Image::from_file_with_format(
+            include_bytes!("../assets/left_ar.png"),
+            None,
+        ))
+        .font_size(10)
+        //.margin(RectOffset::new(0.0, 0.0, 0.0, 0.0))
+        // .background_margin(RectOffset::new(0.0, 8.0, 0.0, 0.0))
+        .build();
+
+    let right_ar_button_style = root_ui()
+        .style_builder()
+        .background(Image::from_file_with_format(
+            include_bytes!("../assets/right_ar.png"),
+            None,
+        ))
+        .font_size(10)
+        .build();
 
     let start_button_style = root_ui()
         .style_builder()
@@ -545,20 +563,30 @@ async fn main() {
         .text_color(Color::from_rgba(255, 255, 255, 255))
         .font_size(20)
         .margin(RectOffset::new(20.0, 110.0, 11.0, 11.0))
-        .font(include_bytes!("../assets/Montserrat-Regular.ttf")).unwrap()
+        .font(include_bytes!("../assets/ofont.ru_Montserrat.ttf")).unwrap()
         .build();
 
     let start_label_style = root_ui()
         .style_builder()
         .text_color(Color::from_rgba(125, 208, 255, 100))
         .font_size(20)
-        .font(include_bytes!("../assets/Montserrat-Regular.ttf")).unwrap()
+        .font(include_bytes!("../assets/ofont.ru_Montserrat.ttf")).unwrap()
         .build();
 
 
     let start_skin = Skin {
         button_style: start_button_style,
         label_style: start_label_style,
+        ..root_ui().default_skin()
+    };
+
+    let left_ar_skin = Skin {
+        button_style: left_ar_button_style,
+        ..root_ui().default_skin()
+    };
+
+    let right_ar_skin = Skin {
+        button_style: right_ar_button_style,
         ..root_ui().default_skin()
     };
 
@@ -586,7 +614,6 @@ async fn main() {
         // debug!("{} {} {} {}", mouse_x, mouse_y, screen_width(), screen_height());
         match g.current_screen {
             Screens::Start => {
-                root_ui().push_skin(&start_skin);
 
                 let center_x = screen_width() / 2.0;
                 let center_y = screen_height() / 2.0;
@@ -597,48 +624,42 @@ async fn main() {
                     WHITE,
                 );
                 draw_rectangle(0.0, center_y + logo.height() / 1.5, screen_width(), 60.0, Color::from_rgba(248, 248, 248, 100));
-                draw_texture(
-                    right_ar,
-                    center_x + screen_width() / 4. ,
-                    center_y  + 110.,
-                    WHITE,
-                );
-                root_ui().label(vec2(center_x - logo.width() / 3.0, center_y + 110.), "Beginner");
-                //draw_text("Beginner", screen_width() / 2. - logo.width() / 2., screen_height() / 2.  + 120., 20., Color::from_rgba(125, 208, 255, 100));
-                draw_texture(
-                    left_ar,
-                    center_x - screen_width() / 4. ,
-                    center_y + 110.,
-                    WHITE,
-                );
-                // widgets::Button::new("New Game").position(vec2(center_x - button.width() / 2., center_y + 200.)).ui(&mut root_ui());
 
-                if root_ui().button(vec2(center_x - button.width() / 2., center_y + 200.), "New Game") {
-                    g.current_difficult = Difficult::SuperEasy;
+                root_ui().push_skin(&right_ar_skin);
+                if root_ui().button(vec2(center_x + screen_width() / 4., center_y + 110.), "   ") {
+                    match g.current_difficult {
+                        Difficult::SuperEasy => {g.current_difficult = Difficult::Easy}
+                        Difficult::Easy => {g.current_difficult = Difficult::Medium}
+                        Difficult::Medium => {g.current_difficult = Difficult::Hard}
+                        Difficult::Hard => {g.current_difficult = Difficult::SuperEasy}
+                    }
+                }
+
+                root_ui().pop_skin();
+                root_ui().push_skin(&left_ar_skin);
+                if root_ui().button(vec2(center_x - screen_width() / 4., center_y + 110.), "   ") {
+                    match g.current_difficult {
+                        Difficult::SuperEasy => {g.current_difficult = Difficult::Hard}
+                        Difficult::Easy => {g.current_difficult = Difficult::SuperEasy}
+                        Difficult::Medium => {g.current_difficult = Difficult::Easy}
+                        Difficult::Hard => {g.current_difficult = Difficult::Medium}
+                    }
+                }
+
+                root_ui().pop_skin();
+                root_ui().push_skin(&start_skin);
+                let level_name: String;
+                match g.current_difficult {
+                    Difficult::SuperEasy => { level_name = "Начинающий".to_owned()}
+                    Difficult::Easy => { level_name = "Легко".to_owned()}
+                    Difficult::Medium => { level_name = "Средне".to_owned()}
+                    Difficult::Hard => { level_name = "Сложно".to_owned()}
+                }
+                root_ui().label(vec2(center_x - logo.width() / 3.0, center_y + 110.), &level_name);
+                if root_ui().button(vec2(center_x - button.width() / 2., center_y + 200.), "Новая Игра") {
                     g.regenerate();
                     g.current_screen = Screens::Game;
                 }
-
-                // if root_ui().button(vec2(center, 70.0), "Beginner") {
-                //     g.current_difficult = Difficult::SuperEasy;
-                //     g.regenerate();
-                //     g.current_screen = Screens::Game;
-                // }
-                // if root_ui().button(vec2(center, 130.0), "  Easy  ") {
-                //     g.current_difficult = Difficult::Easy;
-                //     g.regenerate();
-                //     g.current_screen = Screens::Game;
-                // }
-                // if root_ui().button(vec2(center, 190.0), " Medium ") {
-                //     g.current_difficult = Difficult::Medium;
-                //     g.regenerate();
-                //     g.current_screen = Screens::Game;
-                // }
-                // if root_ui().button(vec2(center, 250.0), "  Hard  ") {
-                //     g.current_difficult = Difficult::Hard;
-                //     g.regenerate();
-                //     g.current_screen = Screens::Game;
-                // }
             }
             Screens::Game => {
                 root_ui().push_skin(&game_skin);
