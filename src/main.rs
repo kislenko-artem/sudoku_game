@@ -331,21 +331,40 @@ impl Game {
         let mut y = self.start_y;
         let mut counter: usize = 0;
         let def_thickness: f32 = 1.0;
-        let def_color = GRAY;
+        let def_color = Color::from_rgba(219, 219, 219, 255);
         for x in (self.start_x..self.end_x).step_by(self.offset) {
+            if x == self.start_x {
+                y += self.offset as f32;
+                counter += 1;
+                continue;
+            }
             let mut thickness = def_thickness;
             let mut color = def_color;
             if x == self.start_x || x == self.end_x || counter % 3 == 0 {
                 thickness *= 2.0;
-                color = GRAY;
+                color = Color::from_rgba(125, 208, 255, 255);
+
+                draw_line(self.start_x as f32, y, self.end_x as f32, y, thickness, color);
+                draw_line(x as f32, self.start_y, x as f32, self.end_y as f32, thickness, color);
+                y += self.offset as f32;
+                counter += 1;
+                continue;
             }
-            draw_line(self.start_x as f32, y, self.end_x as f32, y, thickness, color);
-            draw_line(x as f32, self.start_y, x as f32, self.end_y as f32, thickness, color);
+
+            for i in 0..9 {
+                let offset = self.offset as f32 * i as f32;
+                let x1 = self.start_x as f32 + offset + 5.;
+                let x2 = self.start_x as f32 + offset as f32 + self.offset as f32 - 5.;
+                draw_line(x1, y, x2, y, thickness, color);
+
+                let y1 = self.start_y as f32 + offset + 5.;
+                let y2 = self.start_y as f32 + offset as f32 + self.offset as f32 - 5.;
+                draw_line(x as f32, y1, x as f32, y2, thickness, color);
+            }
+
             y += self.offset as f32;
             counter += 1;
         }
-        draw_line(self.start_x as f32, self.end_y as f32, self.end_x as f32, self.end_y as f32, 2.0, GRAY);
-        draw_line(self.end_x as f32, self.start_y, self.end_x as f32, self.end_y as f32, 2.0, GRAY);
     }
 
     fn hint(&mut self) {
@@ -472,14 +491,14 @@ impl Game {
                 for coord in &need_mark {
                     if coord[0] == i && coord[1] == counter {
                         let x: f32 = self.start_x as f32 + (self.offset * i) as f32 + 3.;
-                        let key = Key{x: coord[0], y: coord[1]};
+                        let key = Key { x: coord[0], y: coord[1] };
                         match self.empties.get(&key) {
-                            None => {draw_texture(self.textures.get("color_circle").unwrap().clone(), x, y + 3., WHITE)}
+                            None => { draw_texture(self.textures.get("color_circle").unwrap().clone(), x, y + 3., WHITE) }
                             Some(_) => {}
                         }
                         match self.user_matrix.get(&key) {
                             None => {}
-                            Some(_) => {draw_texture(self.textures.get("color_circle").unwrap().clone(), x, y + 3., WHITE)}
+                            Some(_) => { draw_texture(self.textures.get("color_circle").unwrap().clone(), x, y + 3., WHITE) }
                         }
                         color = Color::from_rgba(255, 255, 255, 255);
                         //color = RED;
@@ -488,7 +507,7 @@ impl Game {
                 for coord in &self.marked_coord {
                     if coord[0] == i && coord[1] == counter {
                         let x = self.start_x as f32 + (self.offset * i) as f32;
-                        draw_texture(self.textures.get("color_circle").unwrap().clone(), x+3., y+3., WHITE);
+                        draw_texture(self.textures.get("color_circle").unwrap().clone(), x + 3., y + 3., WHITE);
                         // draw_rectangle(self.start_x as f32 + (self.offset * i) as f32, y, self.offset as f32, self.offset as f32, GREEN);
                     }
                 }
