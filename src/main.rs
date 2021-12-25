@@ -386,9 +386,21 @@ impl Game {
             }
         }
     }
+    fn draw_hit_buttons(&mut self) {
+        let y = self.end_y as f32 - self.offset as f32 / 3.0;
+        let offset = self.offset as f32 / 1.7;
+        let first_x = self.start_x as f32 ;
+
+        if root_ui().button(Vec2::new(first_x, y + offset), "Проверить") {
+            self.validate();
+        }
+        if root_ui().button(Vec2::new(first_x + offset as f32 * 8., y + offset), "Подсказка") {
+            self.hint();
+        }
+    }
 
     fn draw_numbers(&mut self) {
-        let mut y = self.end_y as f32 + self.offset as f32 / 2.1;
+        let mut y = self.end_y as f32 + self.offset as f32 * 1.8;
         let offset = self.offset as f32 / 1.7;
         let r = 26.;
         let circle_x_offset = 13.;
@@ -611,19 +623,44 @@ async fn main() {
 
     let button_style = root_ui()
         .style_builder()
-        // .background(Image::from_file_with_format(
-        //     include_bytes!("../assets/white_button.png"),
-        //     None,
-        // ))
-        //.background_margin(RectOffset::new(25.0, 25.0, 10.0, 18.0))
         .text_color(Color::from_rgba(166, 166, 166, 255))
-        //.margin(RectOffset::new(25.0, 25.0, 10.0, 18.0))
         .font_size(40)
         .font(include_bytes!("../assets/MontserratBold.ttf")).unwrap()
         .build();
 
     let button_skin = Skin {
         button_style,
+        ..root_ui().default_skin()
+    };
+
+    let big_button_style = root_ui()
+        .style_builder()
+        .background(Image::from_file_with_format(
+            include_bytes!("../assets/button_gray.png"),
+            None,
+        ))
+        .margin(RectOffset::new(45.0, 35.0, 10.0, 18.0))
+        .text_color(Color::from_rgba(0, 0, 0, 255))
+        .font_size(17)
+        .font(include_bytes!("../assets/ofont.ru_Montserrat.ttf")).unwrap()
+        .build();
+
+    let big_button_skin = Skin {
+        button_style: big_button_style,
+        ..root_ui().default_skin()
+    };
+
+    let button_arrow_style = root_ui()
+        .style_builder()
+        .text_color(Color::from_rgba(141, 141, 141, 255))
+        .font_size(40)
+        .font(include_bytes!("../assets/arrows.ttf")).unwrap()
+        .margin(RectOffset::new(0.0, 0.0, 0.0, 0.0))
+        .background_margin(RectOffset::new(0.0, 0.0, 0.0, 0.0))
+        .build();
+
+    let button_arrow_skin = Skin {
+        button_style: button_arrow_style,
         ..root_ui().default_skin()
     };
 
@@ -689,7 +726,15 @@ async fn main() {
             Screens::Game => {
                 root_ui().push_skin(&button_skin);
                 g.draw_numbers();
+                root_ui().pop_skin();
+                root_ui().push_skin(&big_button_skin);
+                g.draw_hit_buttons();
                 g.game_screen(font, mouse_x, mouse_y);
+                root_ui().pop_skin();
+                root_ui().push_skin(&button_arrow_skin);
+                if root_ui().button(Vec2::new(g.start_x as f32, g.start_y - 50.), "J") {
+                    g.current_screen = Screens::Start;
+                }
             }
         }
 
