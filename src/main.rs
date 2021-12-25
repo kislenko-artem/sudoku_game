@@ -32,6 +32,7 @@ struct Game {
     matrix: Vec<[u8; 9]>,
     no_valid: Vec<[usize; 2]>,
     current_screen: Screens,
+    textures: HashMap<String, Texture2D>,
 }
 
 impl Game {
@@ -45,7 +46,8 @@ impl Game {
         self.matrix = Game::create_matrix(&sudoku);
         self.no_valid = vec![];
     }
-    fn new(screen_height: f32, screen_width: f32, current_difficult: Difficult) -> Self {
+
+    async fn new(screen_height: f32, screen_width: f32, current_difficult: Difficult) -> Self {
         let steps = 9.0;
         let offset: usize = 40;
         let start_y: f32 = screen_height / 2.0 - offset as f32 * steps / 1.5;
@@ -56,6 +58,11 @@ impl Game {
         let mut empties = Default::default();
         Game::fill_empties(&sudoku, &mut empties, current_difficult);
 
+
+        let color_circle: Texture2D = load_texture("assets/color_circle.png").await.unwrap();
+        let textures: HashMap<String, Texture2D> = HashMap::from([
+            ("color_circle".to_string(), color_circle),
+        ]);
 
         return Game {
             font_size: 25.0,
@@ -71,6 +78,7 @@ impl Game {
             matrix: Game::create_matrix(&sudoku),
             no_valid: vec![],
             current_screen: Screens::Start,
+            textures,
         };
     }
 
@@ -389,7 +397,7 @@ impl Game {
     fn draw_hit_buttons(&mut self) {
         let y = self.end_y as f32 - self.offset as f32 / 3.0;
         let offset = self.offset as f32 / 1.7;
-        let first_x = self.start_x as f32 ;
+        let first_x = self.start_x as f32;
 
         if root_ui().button(Vec2::new(first_x, y + offset), "Проверить") {
             self.validate();
@@ -449,19 +457,6 @@ impl Game {
         if root_ui().button(Vec2::new(first_x + new_offset, y), "X") {
             self.fill_num(Option::Some(KeyCode::Delete));
         }
-
-        // if root_ui().button(Vec2::new(first_x + offset * 9.0, y), "X") {
-        //     self.fill_num(Option::Some(KeyCode::Delete));
-        // }
-        // if root_ui().button(Vec2::new(first_x, y + offset), "Validate") {
-        //     self.validate();
-        // }
-        // if root_ui().button(Vec2::new(first_x + offset as f32 * 4.0, y + offset), "Hint") {
-        //     self.hint();
-        // }
-        // if root_ui().button(Vec2::new(first_x + offset as f32 * 7.0, y + offset), "Back") {
-        //     self.current_screen = Screens::Start;
-        // }
     }
 
     fn set_numbers(&self, mut need_mark: Vec<[usize; 2]>, font: Font) {
@@ -473,26 +468,39 @@ impl Game {
         for _ in (self.start_x..self.end_x).step_by(self.offset) {
             for i in (0..9).step_by(1) {
                 let mut val = Game::get_char_code(self.matrix[counter][i]);
-                let mut color = BLACK;
+                let mut color = Color::from_rgba(100, 100, 100, 255);
                 for coord in &need_mark {
                     if coord[0] == i && coord[1] == counter {
-                        color = RED;
+                        let x: f32 = self.start_x as f32 + (self.offset * i) as f32 + 3.;
+                        let key = Key{x: coord[0], y: coord[1]};
+                        match self.empties.get(&key) {
+                            None => {draw_texture(self.textures.get("color_circle").unwrap().clone(), x, y + 3., WHITE)}
+                            Some(_) => {}
+                        }
+                        match self.user_matrix.get(&key) {
+                            None => {}
+                            Some(_) => {draw_texture(self.textures.get("color_circle").unwrap().clone(), x, y + 3., WHITE)}
+                        }
+                        color = Color::from_rgba(255, 255, 255, 255);
+                        //color = RED;
                     }
                 }
                 for coord in &self.marked_coord {
                     if coord[0] == i && coord[1] == counter {
-                        draw_rectangle(self.start_x as f32 + (self.offset * i) as f32, y, self.offset as f32, self.offset as f32, GREEN);
+                        let x = self.start_x as f32 + (self.offset * i) as f32;
+                        draw_texture(self.textures.get("color_circle").unwrap().clone(), x+3., y+3., WHITE);
+                        // draw_rectangle(self.start_x as f32 + (self.offset * i) as f32, y, self.offset as f32, self.offset as f32, GREEN);
                     }
                 }
                 for (key, _) in &self.empties {
                     if key.x == i && key.y == counter {
-                        color = BLUE;
+                        color = Color::from_rgba(125, 208, 255, 255);
                         val = "".to_owned();
                     }
                 }
                 for (key, v) in &self.user_matrix {
                     if key.x == i && key.y == counter {
-                        color = BLUE;
+                        color = Color::from_rgba(125, 208, 255, 255);
                         val = v.to_string();
                     }
                 }
@@ -555,7 +563,7 @@ enum Screens {
 
 #[macroquad::main("Sudoku")]
 async fn main() {
-    let mut g = Game::new(screen_height(), screen_width(), Difficult::SuperEasy);
+    let mut g = Game::new(screen_height(), screen_width(), Difficult::SuperEasy).await;
 
 
     let font = load_ttf_font("./assets/ofont.ru_Montserrat.ttf")
@@ -572,8 +580,6 @@ async fn main() {
             None,
         ))
         .font_size(10)
-        //.margin(RectOffset::new(0.0, 0.0, 0.0, 0.0))
-        // .background_margin(RectOffset::new(0.0, 8.0, 0.0, 0.0))
         .build();
 
     let right_ar_button_style = root_ui()
@@ -664,10 +670,19 @@ async fn main() {
         ..root_ui().default_skin()
     };
 
-    // let game_skin = Skin {
-    //     button_style,
-    //     ..root_ui().default_skin()
-    // };
+    let button_game_style = root_ui()
+        .style_builder()
+        .text_color(Color::from_rgba(141, 141, 141, 255))
+        .font_size(40)
+        .font(include_bytes!("../assets/arrows.ttf")).unwrap()
+        .margin(RectOffset::new(0.0, 0.0, 0.0, 0.0))
+        .background_margin(RectOffset::new(0.0, 0.0, 0.0, 0.0))
+        .build();
+
+    let game_skin = Skin {
+        button_style: button_game_style,
+        ..root_ui().default_skin()
+    };
 
     loop {
         clear_background(WHITE);
@@ -676,7 +691,6 @@ async fn main() {
         // debug!("{} {} {} {}", mouse_x, mouse_y, screen_width(), screen_height());
         match g.current_screen {
             Screens::Start => {
-
                 let center_x = screen_width() / 2.0;
                 let center_y = screen_height() / 2.0;
                 draw_texture(
@@ -690,10 +704,10 @@ async fn main() {
                 root_ui().push_skin(&right_ar_skin);
                 if root_ui().button(vec2(center_x + logo.width(), center_y + 110.), "   ") {
                     match g.current_difficult {
-                        Difficult::SuperEasy => {g.current_difficult = Difficult::Easy}
-                        Difficult::Easy => {g.current_difficult = Difficult::Medium}
-                        Difficult::Medium => {g.current_difficult = Difficult::Hard}
-                        Difficult::Hard => {g.current_difficult = Difficult::SuperEasy}
+                        Difficult::SuperEasy => { g.current_difficult = Difficult::Easy }
+                        Difficult::Easy => { g.current_difficult = Difficult::Medium }
+                        Difficult::Medium => { g.current_difficult = Difficult::Hard }
+                        Difficult::Hard => { g.current_difficult = Difficult::SuperEasy }
                     }
                 }
 
@@ -701,10 +715,10 @@ async fn main() {
                 root_ui().push_skin(&left_ar_skin);
                 if root_ui().button(vec2(center_x - logo.width(), center_y + 110.), "   ") {
                     match g.current_difficult {
-                        Difficult::SuperEasy => {g.current_difficult = Difficult::Hard}
-                        Difficult::Easy => {g.current_difficult = Difficult::SuperEasy}
-                        Difficult::Medium => {g.current_difficult = Difficult::Easy}
-                        Difficult::Hard => {g.current_difficult = Difficult::Medium}
+                        Difficult::SuperEasy => { g.current_difficult = Difficult::Hard }
+                        Difficult::Easy => { g.current_difficult = Difficult::SuperEasy }
+                        Difficult::Medium => { g.current_difficult = Difficult::Easy }
+                        Difficult::Hard => { g.current_difficult = Difficult::Medium }
                     }
                 }
 
@@ -712,10 +726,10 @@ async fn main() {
                 root_ui().push_skin(&start_skin);
                 let level_name: String;
                 match g.current_difficult {
-                    Difficult::SuperEasy => { level_name = "Начинающий".to_owned()}
-                    Difficult::Easy => { level_name = "Легко".to_owned()}
-                    Difficult::Medium => { level_name = "Средне".to_owned()}
-                    Difficult::Hard => { level_name = "Сложно".to_owned()}
+                    Difficult::SuperEasy => { level_name = "Начинающий".to_owned() }
+                    Difficult::Easy => { level_name = "Легко".to_owned() }
+                    Difficult::Medium => { level_name = "Средне".to_owned() }
+                    Difficult::Hard => { level_name = "Сложно".to_owned() }
                 }
                 root_ui().label(vec2(center_x - logo.width() / 3.0, center_y + 110.), &level_name);
                 if root_ui().button(vec2(center_x - button.width() / 2., center_y + 200.), "Новая Игра") {
@@ -729,6 +743,8 @@ async fn main() {
                 root_ui().pop_skin();
                 root_ui().push_skin(&big_button_skin);
                 g.draw_hit_buttons();
+                root_ui().pop_skin();
+                root_ui().push_skin(&game_skin);
                 g.game_screen(font, mouse_x, mouse_y);
                 root_ui().pop_skin();
                 root_ui().push_skin(&button_arrow_skin);
