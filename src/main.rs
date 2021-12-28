@@ -170,17 +170,18 @@ impl Game {
                 self.marked_coord = vec!([x, y]);
             }
             self.draw_form();
-
             let key = Key { x, y };
-            if self.empties.contains_key(&key) {
-                self.set_numbers(self.marked_coord.clone(), font.clone());
-                return;
-            }
 
             let mut num = self.matrix[y][x];
             if self.user_matrix.contains_key(&key) {
                 num = self.user_matrix.get(&key).unwrap().clone() - 1
             }
+
+            if self.empties.contains_key(&key) && !self.user_matrix.contains_key(&key) {
+                self.set_numbers(self.marked_coord.clone(), font.clone());
+                return;
+            }
+
             let need_mark = self.coord_by_num(num);
 
             self.set_numbers(need_mark, font.clone());
