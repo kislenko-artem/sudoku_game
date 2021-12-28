@@ -10,6 +10,14 @@ struct Key {
     y: usize,
 }
 
+#[derive(Debug)]
+struct Circle {
+    x: f32,
+    y: f32,
+    r: f32,
+    key: KeyCode,
+}
+
 #[derive(Clone, Copy)]
 enum Difficult {
     SuperEasy,
@@ -33,6 +41,7 @@ struct Game {
     no_valid: Vec<[usize; 2]>,
     current_screen: Screens,
     textures: HashMap<String, Texture2D>,
+    numbers_coord: Vec<Circle>,
 }
 
 impl Game {
@@ -79,23 +88,35 @@ impl Game {
             no_valid: vec![],
             current_screen: Screens::Start,
             textures,
+            numbers_coord: vec![],
         };
     }
+
+    fn in_numbers_coord(&self, mouse_x: f32, mouse_y: f32) -> Option<KeyCode> {
+        for c in &self.numbers_coord {
+            if mouse_x < c.x - c.r {
+                continue;
+            }
+            if mouse_x > c.x + c.r {
+                continue;
+            }
+            if mouse_y < c.y - c.r {
+                continue;
+            }
+            if mouse_y > c.y + c.r {
+                continue;
+            }
+            return Some(c.key.clone());
+        }
+        return None;
+    }
+
 
     fn game_screen(&mut self, font: Font, mut mouse_x: f32, mut mouse_y: f32) {
         self.draw_form();
 
-        if !self.in_window(mouse_x, mouse_y) {
-            self.set_numbers(vec![], font.clone());
-            if is_mouse_button_down(MouseButton::Left) {
-                self.marked_coord = vec![];
-            }
-            return;
-        }
-
         let mut is_left = false;
         let mut is_right = false;
-
         for touch in touches() {
             match touch.phase {
                 TouchPhase::Started => {
@@ -113,7 +134,6 @@ impl Game {
                 TouchPhase::Cancelled => {}
             };
         }
-        let (x, y) = self.coord_by_position(mouse_x, mouse_y);
 
         if is_mouse_button_down(MouseButton::Left) {
             is_left = true
@@ -121,6 +141,29 @@ impl Game {
         if is_mouse_button_down(MouseButton::Left) {
             is_right = true
         }
+
+        match self.in_numbers_coord(mouse_x, mouse_y) {
+            None => {}
+            Some(key_kode) => {
+                if is_left {
+                    self.fill_num(Option::Some(key_kode));
+                }
+            }
+        }
+
+        if !self.in_window(mouse_x, mouse_y) {
+            self.set_numbers(vec![], font.clone());
+            if is_mouse_button_down(MouseButton::Left) {
+                self.marked_coord = vec![];
+            }
+            return;
+        }
+        if is_left || is_right {
+            self.no_valid = vec![]
+        }
+
+
+        let (x, y) = self.coord_by_position(mouse_x, mouse_y);
 
         if is_left || is_right {
             if is_left {
@@ -446,6 +489,7 @@ impl Game {
             (9, KeyCode::Key9),
         ]);
 
+        self.numbers_coord.push(Circle { x: first_x + 12., y: y + circle_y_offset, r, key: KeyCode::Key1 });
         draw_circle_lines(first_x + 12., y + circle_y_offset, r, 1.0, circle_color);
         if root_ui().button(Vec2::new(first_x + 3., y), "1") {
             self.fill_num(Option::Some(KeyCode::Key1));
@@ -455,6 +499,7 @@ impl Game {
         for i in 2..6 {
             let new_offset = offset as f32 * multi;
             draw_circle_lines(first_x + new_offset + circle_x_offset, y + circle_y_offset, r, 1.0, circle_color);
+            self.numbers_coord.push(Circle { x: first_x + new_offset + circle_x_offset, y: y + circle_y_offset, r, key: key_val.get(&i).cloned().unwrap() });
             if root_ui().button(Vec2::new(first_x + new_offset, y), i.to_string()) {
                 self.fill_num(key_val.get(&i).cloned());
             }
@@ -465,6 +510,7 @@ impl Game {
         for i in 6..10 {
             let new_offset = offset as f32 * multi;
             draw_circle_lines(first_x + new_offset + circle_x_offset, y + circle_y_offset, r, 1.0, circle_color);
+            self.numbers_coord.push(Circle { x: first_x + new_offset + circle_x_offset, y: y + circle_y_offset, r, key: key_val.get(&i).cloned().unwrap() });
             if root_ui().button(Vec2::new(first_x + new_offset, y), i.to_string()) {
                 self.fill_num(key_val.get(&i).cloned());
             }
@@ -473,6 +519,7 @@ impl Game {
 
         let new_offset = offset as f32 * multi;
         draw_circle_lines(first_x + new_offset + circle_x_offset, y + circle_y_offset, r, 1.0, circle_color);
+        self.numbers_coord.push(Circle { x: first_x + new_offset + circle_x_offset, y: y + circle_y_offset, r, key: KeyCode::Delete });
         if root_ui().button(Vec2::new(first_x + new_offset, y), "X") {
             self.fill_num(Option::Some(KeyCode::Delete));
         }
@@ -521,6 +568,11 @@ impl Game {
                     if key.x == i && key.y == counter {
                         color = Color::from_rgba(125, 208, 255, 255);
                         val = v.to_string();
+                        for coord in &self.marked_coord {
+                            if coord[0] == key.x && coord[1] == key.y {
+                                color = WHITE;
+                            }
+                        }
                     }
                 }
                 for coord in &self.no_valid {
@@ -528,7 +580,7 @@ impl Game {
                         color = RED;
                     }
                 }
-                let text_start_x: f32 = self.start_x as f32 + (self.offset * i) as f32 + self.offset as f32 / 2.0 - self.font_size / 4.0;
+                let text_start_x: f32 = self.start_x as f32 + (self.offset * i) as f32 + self.offset as f32 / 2.0 - self.font_size / 3.5;
                 let text_start_y: f32 = y + self.offset as f32 - self.offset as f32 / 2.0 + self.font_size / 4.0;
                 draw_text_ex(&val, text_start_x, text_start_y, TextParams {
                     font_size: self.font_size as u16,
@@ -646,15 +698,15 @@ async fn main() {
         ..root_ui().default_skin()
     };
 
-    let button_style = root_ui()
+    let numbers_button_style = root_ui()
         .style_builder()
         .text_color(Color::from_rgba(166, 166, 166, 255))
         .font_size(40)
         .font(include_bytes!("../assets/MontserratBold.ttf")).unwrap()
         .build();
 
-    let button_skin = Skin {
-        button_style,
+    let numbers_button_skin = Skin {
+        button_style: numbers_button_style,
         ..root_ui().default_skin()
     };
 
@@ -721,7 +773,7 @@ async fn main() {
                 draw_rectangle(0.0, center_y + logo.height() / 1.5, screen_width(), 60.0, Color::from_rgba(248, 248, 248, 255));
 
                 root_ui().push_skin(&right_ar_skin);
-                if root_ui().button(vec2(center_x + logo.width(), center_y + 110.), "   ") {
+                if root_ui().button(vec2(center_x + logo.width(), center_y + 114.), "   ") {
                     match g.current_difficult {
                         Difficult::SuperEasy => { g.current_difficult = Difficult::Easy }
                         Difficult::Easy => { g.current_difficult = Difficult::Medium }
@@ -732,7 +784,7 @@ async fn main() {
 
                 root_ui().pop_skin();
                 root_ui().push_skin(&left_ar_skin);
-                if root_ui().button(vec2(center_x - logo.width(), center_y + 110.), "   ") {
+                if root_ui().button(vec2(center_x - logo.width(), center_y + 114.), "   ") {
                     match g.current_difficult {
                         Difficult::SuperEasy => { g.current_difficult = Difficult::Hard }
                         Difficult::Easy => { g.current_difficult = Difficult::SuperEasy }
@@ -750,14 +802,15 @@ async fn main() {
                     Difficult::Medium => { level_name = "Средне".to_owned() }
                     Difficult::Hard => { level_name = "Сложно".to_owned() }
                 }
-                root_ui().label(vec2(center_x - logo.width() / 3.0, center_y + 110.), &level_name);
+                let offset = level_name.chars().count() as f32 * (g.font_size - 12.);
+                root_ui().label(vec2(center_x - offset / 2., center_y + 110.), &level_name);
                 if root_ui().button(vec2(center_x - button.width() / 2., center_y + 200.), "Новая Игра") {
                     g.regenerate();
                     g.current_screen = Screens::Game;
                 }
             }
             Screens::Game => {
-                root_ui().push_skin(&button_skin);
+                root_ui().push_skin(&numbers_button_skin);
                 g.draw_numbers();
                 root_ui().pop_skin();
                 root_ui().push_skin(&big_button_skin);
