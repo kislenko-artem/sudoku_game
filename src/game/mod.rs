@@ -116,7 +116,7 @@ impl Game {
                 duration = time::get_time() - self.start_time.unwrap();
             }
         }
-        let minutes = duration - (duration % 60.);
+        let minutes = (duration / 60.) as i64 as f64;
         let seconds = (duration - minutes * 60.) as i64 as f64;
         if minutes > 9. && seconds > 9. {
             return format!("{}:{}", minutes, seconds);
