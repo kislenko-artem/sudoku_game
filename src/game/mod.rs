@@ -1,8 +1,9 @@
 use std::collections::HashMap;
+
 use macroquad::prelude::*;
 use macroquad::ui::{root_ui};
+use macroquad::time;
 use sudoku::Sudoku;
-use chrono;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 struct Key {
@@ -38,8 +39,8 @@ pub struct Game {
     pub start_x: usize,
     pub current_difficult: Difficult,
     pub current_screen: Screens,
-    pub start_time: Option<chrono::DateTime<chrono::Local>>,
-    pub finish_time: Option<chrono::DateTime<chrono::Local>>,
+    pub start_time: Option<f64>,
+    pub finish_time: Option<f64>,
     pub is_finish: bool,
     end_y: f32,
     offset: usize,
@@ -64,7 +65,7 @@ impl Game {
         let sudoku = Sudoku::generate_solved();
         let mut empties = Default::default();
         Game::fill_empties(&sudoku, &mut empties, current_difficult);
-        
+
         let color_circle: Texture2D = load_texture("assets/color_circle.png").await.unwrap();
         let textures: HashMap<String, Texture2D> = HashMap::from([
             ("color_circle".to_string(), color_circle),
@@ -101,36 +102,37 @@ impl Game {
         self.marked_coord = vec![];
         self.matrix = Game::create_matrix(&sudoku);
         self.no_valid = vec![];
-        self.start_time = Some(chrono::offset::Local::now());
+        self.start_time = Some(time::get_time());
         self.is_finish = false;
     }
 
     pub fn get_duration(&self) -> String {
-
-        let duration: chrono::Duration;
+        let duration: f64;
         match self.is_finish {
             true => {
-                duration = self.finish_time.unwrap().signed_duration_since(self.start_time.unwrap());
+                duration = self.finish_time.unwrap() - self.start_time.unwrap();
             }
             false => {
-                duration = chrono::offset::Local::now().signed_duration_since(self.start_time.unwrap());
+                duration = time::get_time() - self.start_time.unwrap();
             }
         }
-        if duration.num_minutes() > 9 && duration.num_seconds() > 9 {
-            return format!("{}:{}", duration.num_minutes(), duration.num_seconds());
+        let minutes = duration - (duration % 60.);
+        let seconds = (duration - minutes * 60.) as i64 as f64;
+        if minutes > 9. && seconds > 9. {
+            return format!("{}:{}", minutes, seconds);
         }
-        if duration.num_minutes() < 9 && duration.num_seconds() > 9 {
-            return format!("0{}:{}", duration.num_minutes(), duration.num_seconds());
+        if minutes < 9. && seconds > 9. {
+            return format!("0{}:{}", minutes, seconds);
         }
-        if duration.num_minutes() > 9 && duration.num_seconds() < 9 {
-            return format!("{}:0{}", duration.num_minutes(), duration.num_seconds());
+        if minutes > 9. && seconds < 9. {
+            return format!("{}:0{}", minutes, seconds);
         }
-        return format!("0{}:0{}", duration.num_minutes(), duration.num_seconds());
+        return format!("0{}:0{}", minutes, seconds);
     }
 
     pub fn is_win(&mut self) -> bool {
         if self.is_finish {
-            return true
+            return true;
         }
         for (key, _) in &self.empties {
             match self.user_matrix.get(&key) {
@@ -143,7 +145,7 @@ impl Game {
                 }
             }
         }
-        self.finish_time = Some(chrono::offset::Local::now());
+        self.finish_time = Some(time::get_time());
         self.is_finish = true;
         return true;
     }
@@ -216,7 +218,7 @@ impl Game {
             Difficult::SuperEasy => {
                 let mut start_num = rand::RandomRange::gen_range(0, 10);
                 for (i, _) in real_sudoku.iter().enumerate() {
-                    match start_num%5 {
+                    match start_num % 5 {
                         0 => {
                             let result = rand::RandomRange::gen_range(0, 3);
                             match result {
@@ -236,7 +238,7 @@ impl Game {
             Difficult::Easy => {
                 let mut start_num = rand::RandomRange::gen_range(0, 10);
                 for (i, _) in real_sudoku.iter().enumerate() {
-                    match start_num%2 {
+                    match start_num % 2 {
                         0 => {
                             let result = rand::RandomRange::gen_range(0, 3);
                             match result {
