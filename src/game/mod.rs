@@ -178,27 +178,10 @@ impl Game {
 
         match dif {
             Difficult::SuperEasy => {
-                for (i, num) in real_sudoku.iter().enumerate() {
-                    match num {
-                        None => {
-                            let result = rand::RandomRange::gen_range(0, 2);
-                            match result {
-                                1 => {
-                                    grid_line[i] = 1
-                                }
-                                _ => {}
-                            }
-                        }
-                        Some(_n) => {
-                            grid_line[i] = 1
-                        }
-                    }
-                }
-            }
-            Difficult::Easy => {
-                for (i, num) in real_sudoku.iter().enumerate() {
-                    match num {
-                        None => {
+                let mut start_num = rand::RandomRange::gen_range(0, 10);
+                for (i, _) in real_sudoku.iter().enumerate() {
+                    match start_num%5 {
+                        0 => {
                             let result = rand::RandomRange::gen_range(0, 3);
                             match result {
                                 1 => {
@@ -207,10 +190,31 @@ impl Game {
                                 _ => {}
                             }
                         }
-                        Some(_n) => {
+                        _ => {
                             grid_line[i] = 1
                         }
                     }
+                    start_num += 1;
+                }
+            }
+            Difficult::Easy => {
+                let mut start_num = rand::RandomRange::gen_range(0, 10);
+                for (i, _) in real_sudoku.iter().enumerate() {
+                    match start_num%2 {
+                        0 => {
+                            let result = rand::RandomRange::gen_range(0, 3);
+                            match result {
+                                1 => {
+                                    grid_line[i] = 1
+                                }
+                                _ => {}
+                            }
+                        }
+                        _ => {
+                            grid_line[i] = 1
+                        }
+                    }
+                    start_num += 1;
                 }
             }
             Difficult::Medium => {
