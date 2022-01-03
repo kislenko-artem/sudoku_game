@@ -22,8 +22,9 @@
 
     <script>
         // Sends event to client
-        vkBridge.send('VKWebAppInit');
-        vkBridge.subscribe(e => console.log(e));
+        // vkBridge.send('VKWebAppInit');
+
+
     </script>
 </head>
 
@@ -36,7 +37,20 @@
 
 <script src="https://not-fl3.github.io/miniquad-samples/mq_js_bundle.js"></script>-->
 <script src="/script.js"></script>
-<script>load("/sudoku_vk.wasm");</script> <!-- Your compiled wasm file -->
+<script>load("/sudoku_vk.wasm").then( (obj) => {
+    obj.exports.init_webassembly();
+
+    vkBridge.send('VKWebAppAllowNotifications');
+    vkBridge.send('VKWebAppJoinGroup', {"group_id": 209626344});
+    vkBridge.send("VKWebAppShowInviteBox", {})
+        .then(data => console.log(data.success))
+        .catch(error => console.log(error))
+    vkBridge.send('VKWebAppAllowMessagesFromGroup', {"group_id": 209626344, "key": "dBuBKe1kFcdemzB"});
+    vkBridge.subscribe(e => console.log(e));
+
+    obj.exports.set_user_id();
+    obj.exports.main();
+});</script> <!-- Your compiled wasm file -->
 </body>
 
 </html>

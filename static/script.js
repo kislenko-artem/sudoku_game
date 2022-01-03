@@ -1093,9 +1093,6 @@ var importObject = {
                 var x = relative_position.x;
                 var y = relative_position.y;
 
-                console.log("clientX", x, event.clientX)
-                console.log("clientY", y, event.clientY)
-
                 var btn = into_sapp_mousebutton(event.button);
                 wasm_exports.mouse_up(x, y, btn);
             };
@@ -1363,21 +1360,19 @@ function add_missing_functions_stabs(obj) {
         }
     }
 }
-
 function load(wasm_path) {
     var req = fetch(wasm_path);
 
     register_plugins(plugins);
 
     if (typeof WebAssembly.compileStreaming === 'function') {
-        WebAssembly.compileStreaming(req)
+        return WebAssembly.compileStreaming(req)
             .then(obj => {
                 add_missing_functions_stabs(obj);
                 return WebAssembly.instantiate(obj, importObject);
             })
             .then(
                 obj => {
-                    console.log(obj);
                     wasm_memory = obj.exports.memory;
                     wasm_exports = obj.exports;
 
@@ -1388,14 +1383,14 @@ function load(wasm_path) {
                             ", rust sapp-wasm crate version is: " + crate_version);
                     }
                     init_plugins(plugins);
-                    obj.exports.main();
+                    return obj;
                 })
             .catch(err => {
                 console.error("WASM failed to load, probably incompatible gl.js version");
                 console.error(err);
             })
     } else {
-        req
+        return req
             .then(function (x) { return x.arrayBuffer(); })
             .then(function (bytes) { return WebAssembly.compile(bytes); })
             .then(function (obj) {
@@ -1413,7 +1408,7 @@ function load(wasm_path) {
                         ", rust sapp-wasm crate version is: " + crate_version);
                 }
                 init_plugins(plugins);
-                obj.exports.main();
+                return obj;
             })
             .catch(err => {
                 console.error("WASM failed to load, probably incompatible gl.js version");
