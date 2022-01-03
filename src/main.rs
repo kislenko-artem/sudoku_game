@@ -107,7 +107,7 @@ async fn main() {
                 g.draw_hit_buttons();
                 root_ui().pop_skin();
                 root_ui().push_skin(&current_skin.game_skin);
-                g.draw_game_screen(font, mouse_x, mouse_y);
+                g.draw_game_screen(font, mouse_x, mouse_y, g.is_finish);
 
                 if g.is_win() {
                     let w_x_size = 400.;
@@ -126,7 +126,13 @@ async fn main() {
                             }
                         });
                 }
-
+                let size = measure_text(&g.get_duration(), Some(font), g.font_size as u16, 1.0);
+                draw_text_ex(&g.get_duration(), center_x - size.width / 2., g.start_y - 20., TextParams {
+                    font_size: g.font_size as u16,
+                    font,
+                    color: Color::from_rgba(141, 141, 141, 255),
+                    ..Default::default()
+                });
 
                 root_ui().pop_skin();
                 root_ui().push_skin(&current_skin.button_arrow_skin);

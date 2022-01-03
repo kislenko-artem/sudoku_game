@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use macroquad::prelude::*;
 use macroquad::ui::{root_ui};
 use sudoku::Sudoku;
-
+use chrono;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 struct Key {
@@ -38,6 +38,9 @@ pub struct Game {
     pub start_x: usize,
     pub current_difficult: Difficult,
     pub current_screen: Screens,
+    pub start_time: Option<chrono::DateTime<chrono::Local>>,
+    pub finish_time: Option<chrono::DateTime<chrono::Local>>,
+    pub is_finish: bool,
     end_y: f32,
     offset: usize,
     end_x: usize,
@@ -83,6 +86,9 @@ impl Game {
             current_screen: Screens::Start,
             textures,
             numbers_coord: vec![],
+            start_time: None,
+            finish_time: None,
+            is_finish: false,
         };
     }
 
@@ -95,9 +101,37 @@ impl Game {
         self.marked_coord = vec![];
         self.matrix = Game::create_matrix(&sudoku);
         self.no_valid = vec![];
+        self.start_time = Some(chrono::offset::Local::now());
+        self.is_finish = false;
     }
 
-    pub fn is_win(&self) -> bool {
+    pub fn get_duration(&self) -> String {
+
+        let duration: chrono::Duration;
+        match self.is_finish {
+            true => {
+                duration = self.finish_time.unwrap().signed_duration_since(self.start_time.unwrap());
+            }
+            false => {
+                duration = chrono::offset::Local::now().signed_duration_since(self.start_time.unwrap());
+            }
+        }
+        if duration.num_minutes() > 9 && duration.num_seconds() > 9 {
+            return format!("{}:{}", duration.num_minutes(), duration.num_seconds());
+        }
+        if duration.num_minutes() < 9 && duration.num_seconds() > 9 {
+            return format!("0{}:{}", duration.num_minutes(), duration.num_seconds());
+        }
+        if duration.num_minutes() > 9 && duration.num_seconds() < 9 {
+            return format!("{}:0{}", duration.num_minutes(), duration.num_seconds());
+        }
+        return format!("0{}:0{}", duration.num_minutes(), duration.num_seconds());
+    }
+
+    pub fn is_win(&mut self) -> bool {
+        if self.is_finish {
+            return true
+        }
         for (key, _) in &self.empties {
             match self.user_matrix.get(&key) {
                 None => { return false; }
@@ -109,6 +143,8 @@ impl Game {
                 }
             }
         }
+        self.finish_time = Some(chrono::offset::Local::now());
+        self.is_finish = true;
         return true;
     }
 
@@ -390,7 +426,7 @@ pub trait UI {
     fn draw_form(&self);
     fn draw_number_buttons(&mut self);
     fn draw_hit_buttons(&mut self);
-    fn draw_game_screen(&mut self, font: Font, mouse_x: f32, mouse_y: f32);
+    fn draw_game_screen(&mut self, font: Font, mouse_x: f32, mouse_y: f32, is_finish: bool);
     fn draw_numbers(&self, need_mark: Vec<[usize; 2]>, font: Font);
 }
 
@@ -505,8 +541,12 @@ impl UI for Game {
     }
 
 
-    fn draw_game_screen(&mut self, font: Font, mut mouse_x: f32, mut mouse_y: f32) {
+    fn draw_game_screen(&mut self, font: Font, mut mouse_x: f32, mut mouse_y: f32, is_finish: bool) {
         self.draw_form();
+        if is_finish {
+            self.draw_numbers(vec![], font.clone());
+            return;
+        }
 
         let mut is_left = false;
         let mut is_right = false;
